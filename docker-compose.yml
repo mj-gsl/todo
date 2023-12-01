@@ -1,0 +1,37 @@
+version: '3'
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_container
+    environment:
+      MYSQL_ROOT_PASSWORD: Passw0rd
+      MYSQL_DATABASE: todo_app
+      MYSQL_USER: todouser
+      MYSQL_PASSWORD: Passw0rd
+    ports:
+      - "3307:3306"
+    networks:
+      - todo_network
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # FastAPI Application Service
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi_container
+    depends_on:
+      - mysql
+    environment:
+      - DATABASE_URL=mysql+mysqlconnector://todouser:Passw0rd@mysql:3307/todo_app
+    ports:
+      - "8000:8000"
+    networks:
+      - todo_network
+    # Use wait-for-it.sh to wait for MySQL service
+    command: ["./wait-for-it.sh", "mysql_container", "3306", "--", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+networks:
+  todo_network:
+    driver: bridge
